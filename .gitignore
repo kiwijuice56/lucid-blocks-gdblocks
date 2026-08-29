@@ -1,0 +1,29 @@
+# Godot 4+ ignores
+.godot/
+/android/
+game/addons/godotsteam
+
+# Save files while testing
+game/debug_save_files/*
+
+# Compiled binaries
+*.dll
+*.exp
+extension/src/*.obj
+extension/src/*/*.obj
+*.lib
+*.exe
+*.pdb
+*.os
+*.so
+*.x86_64
+
+# Other junk
+*.tmp
+*.dblite
+*.pck
+.vscode/*
+build/*
+*.zip
+lexend-giga/
+desktop.ini
