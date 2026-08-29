@@ -1,7 +1,5 @@
-# lucid-blocks
-A voxel game created in Godot 4.6.stable.double.
-
-P.S if you are a modder reading this, hi! Feel free to message me with questions on the discord server! This document isn't exhaustive and is mostly internal notes ₍˄·͈༝·͈˄₎
+# lucid-blocks-gdblocks
+The voxel engine gdextension used in Lucid Blocks. This is NOT the repository for the entire game, only the C++ code needed for specific features such as chunk loading, biome generation, and the water simulation. Feel free to contact me on the Lucid Blocks discord server or at lucykiwijuice(at)gmail.com if you have any modding questions!
 
 ## Mod Outline
 The game loads all `.pck` files in the `mods` directory placed next to the `.exe` ([see Godot documentation here](https://docs.godotengine.org/en/stable/tutorials/export/exporting_pcks.html)). When exporting your mod, please make sure you include only the modified/new files (excluding dependencies as well)! This will greatly increase the compatability of your mod.
