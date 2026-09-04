@@ -96,7 +96,7 @@ CLASS::CLASS() { }                                                              
 CLASS::~CLASS() { }
 
 #define BIND_METHOD(CLASS, METHOD, ...)                                         \
-ClassDB::bind_method(D_METHOD(#METHOD, __VA_ARGS__), &CLASS::##METHOD);
+ClassDB::bind_method(D_METHOD(#METHOD, __VA_ARGS__), &CLASS::METHOD);
 
 #define BIND_METHOD_NO_PARAMETERS(CLASS, METHOD)                                \
-ClassDB::bind_method(D_METHOD(#METHOD), &CLASS::##METHOD);
+ClassDB::bind_method(D_METHOD(#METHOD), &CLASS::METHOD);

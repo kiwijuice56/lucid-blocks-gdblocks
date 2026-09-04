@@ -1,25 +1,50 @@
 # lucid-blocks-gdblocks
 The voxel engine gdextension used in Lucid Blocks. This is NOT the repository for the entire game, only the C++ code needed for specific features such as chunk loading, biome generation, and the water simulation. Feel free to contact me on the Lucid Blocks discord server or at lucykiwijuice(at)gmail.com if you have any modding questions!
 
-## Mod Outline
-The game loads all `.pck` files in the `mods` directory placed next to the `.exe` ([see Godot documentation here](https://docs.godotengine.org/en/stable/tutorials/export/exporting_pcks.html)). When exporting your mod, please make sure you include only the modified/new files (excluding dependencies as well)! This will greatly increase the compatability of your mod.
+## Compilation
+Lucid Blocks uses *double precision* Godot, which needs to be manually compiled using the `precision=double` flag. The GDExtension compilation as described below accounts for this. 
 
-## Compiling
-Note: Lucid Blocks uses *double precision* Godot, which has to be manually compiled using the `precision=double` flag. The GDExtension compilation as described below accounts for this. However, GodotSteam has to be compiled using the `precision=double` and `custom_api_file="extension_api.json` flags. I decided to do this manually rather than make GodotSteam a submodule, but the process is relatively simple. The GodotSteam `.gdextension` file should be updated to point to the new binaries. Due to a Godot bug, `CAMERA_POSITION_WORLD` is inverted in any shader when double precision is enabled. All shaders account for this already, but this will need to change if the project is ever upgraded to a later version.
-### Addons
-1) [SoFluffy 1.1.0](https://github.com/maxvolumedev/sofluffy). Minor note: must change `camera.transform` instances in code to `camera.global_transform`.
-2) [GodotSteam 4.17.1](https://godotsteam.com/). Minor note: must recompile and change `.gdextension` file to point to double precision binaries.
 ### Debug
-1) Nagivate to the root folder and run `scons debug_symbols=yes precision=double custom_api_file="extension_api.json"`.
+1) Navigate to the root folder and run `git submodule update --init --recursive` to download the `godot-cpp` source (only needed once).
+2) Run `scons platform=windows precision=double debug_symbols=yes custom_api_file="extension_api.json"` to compile the gdblocks binaries.
 3) Enable `debug` on the root node in `game/main/main.tscn` to unlock developer features.
 4) Run the project from the editor.
 ### Release
-1) Nagivate to the root folder and run `scons precision=double target=template_release custom_api_file="extension_api.json"`.
-3) Ensure that `debug` is disabled on the root node in `game/main/main.tscn`.
-4) Export the project (without debug) using the main Windows configuration. Files will be placed in `build/`.
-### Release checklist
-1) `debug` toggle disabled
-2) Version tag updated
+1) Navigate to the root folder and run `git submodule update --init --recursive` to download the `godot-cpp` source (only needed once).
+2) Run `scons platform=windows precision=double target=template_release custom_api_file="extension_api.json"` to compile the gdblocks binaries.
+3) Export the project or your mod (without debug). 
+
+## Debugger Setup
+If using VSCode, it is recommended to add the following configuration to your `.vscode/launch.json` file. This command allows you to view crashes caused by C++ errors. After running the command, VSCode will prompt you to search for a process. Typing `lucid` into the prompt will narrow down the options to the Godot editor and the currently running lucid blocks instance. Select the process without the `--editor` flag.
+```
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+        "name": "Attach Debugger",
+        "type": "cppvsdbg",
+        "request": "attach",
+        "processId": "${command:pickProcess}",
+    }]
+}
+```
+
+## Project Setup
+Manually setting up the project's dependencies is only needed for users downloading the (private) source repository. Modders will already have the necessary addons within their project after extracting it using Godot Resource Extractor (GDRETools).
+
+Warning: Due to a Godot bug, `CAMERA_POSITION_WORLD` is inverted in any shader when double precision is enabled. All shaders account for this already, but this will need to change if the project is ever upgraded to a later version.
+If setting up the Godot project from scratch, you will need to initialize the following addons manually.
+### Addons
+All addons are already initialized for modders that decompile the Godot project using GDRE. GodotSteam needs to 
+
+1) [SoFluffy 1.1.0](https://github.com/maxvolumedev/sofluffy). Note: must change `camera.transform` instances in code to `camera.global_transform`.
+2) [GodotSteam 4.17.1](https://godotsteam.com/) Note: Must be recompiled using the `precision=double` and `custom_api_file="extension_api.json` flags (in the same way as gdblocks) and the `.gdextension` file must be updated to point to the new binaries.
+
+## Mod Outline
+The game loads all `.pck` files in the `mods` directory placed next to the `.exe` ([see Godot documentation here](https://docs.godotengine.org/en/stable/tutorials/export/exporting_pcks.html)).
+
+### Exporting
+Navigate to `Project > Export`, then select `Add... > Windows Desktop`. In your new preset, go to the Resources tab and switch the export mode to `Export all resources in the the project except the resources checked below`, then check the root folder to select everything. After everything is checked, manually uncheck only the files that you edited. Finally, click `Export PCK/ZIP` and export your mod as a .pck file. 
 
 
 ## Code Structure
