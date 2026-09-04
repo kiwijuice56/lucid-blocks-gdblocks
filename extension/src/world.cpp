@@ -27,6 +27,7 @@ void World::_bind_methods() {
     BIND_METHOD(World, is_chunk_modified, "position");
     BIND_METHOD(World, modify_chunk, "position");
     BIND_METHOD(World, liven_chunk, "position");
+    BIND_METHOD_NO_PARAMETERS(World, remesh_pending_chunks);
 
     BIND_METHOD_NO_PARAMETERS(World, register_loaded_chunks);
     BIND_METHOD_NO_PARAMETERS(World, clear_save_data);
@@ -51,6 +52,8 @@ void World::_bind_methods() {
     BIND_METHOD(World, flood_at, "position");
 
     BIND_METHOD(World, place_block_at, "position", "block_type", "play_effect", "immediate_remesh");
+    BIND_METHOD(World, explode_placement_at, "position", "block_type", "radius", "drop_chance");
+    
     BIND_METHOD(World, place_water_at, "position", "amount");
     BIND_METHOD(World, get_water_level_at, "position");
     BIND_METHOD(World, is_under_water, "position");
@@ -77,9 +80,11 @@ void World::_bind_methods() {
     BIND_PROPERTY(World, bool, debug_stall); // unused now, before was used to debug some stalling issues
     BIND_PROPERTY(World, int64_t, usec_budget_per_frame);
     BIND_PROPERTY(World, int, chunk_batch_size);
+    BIND_PROPERTY(World, int, decoration_batch_size);
+    BIND_PROPERTY(World, int, chunk_render_limit);
 
     ADD_SIGNAL(MethodInfo("fire_spread", PropertyInfo(Variant::VECTOR3, "position")));
-    ADD_SIGNAL(MethodInfo("block_placed", PropertyInfo(Variant::VECTOR3, "position")));
+    ADD_SIGNAL(MethodInfo("block_placed", PropertyInfo(Variant::VECTOR3, "position"), PropertyInfo(Variant::INT, "radius")));
     ADD_SIGNAL(MethodInfo("block_broken", PropertyInfo(Variant::VECTOR3, "position"), PropertyInfo(Variant::INT, "radius")));
     ADD_SIGNAL(MethodInfo("chunk_loaded", PropertyInfo(Variant::VECTOR3I, "position")));
     ADD_SIGNAL(MethodInfo("chunk_unloaded", PropertyInfo(Variant::VECTOR3I, "position")));
@@ -206,6 +211,7 @@ void World::clear() {
     chunk_water_awake_data.clear();
     chunk_fire_data.clear();
     dirty_regions.clear();
+    to_remesh_later.clear();
 
     first_load = true;
     all_loaded = false;
@@ -362,7 +368,8 @@ void World::update_loaded_region() {
     }
 
     if (finalizing_chunks) {
-        while (elapsed_time < 3000) { //usec_budget_per_frame) {
+        int chunks_rendered = 0;
+        while (elapsed_time < usec_budget_per_frame && chunks_rendered < chunk_render_limit) {
             if (chunk_finalization_index >= init_queue.size()) {
                 break;
             }
@@ -377,6 +384,7 @@ void World::update_loaded_region() {
             is_chunk_loaded[coordinate] = true;
             emit_signal("chunk_loaded", coordinate);            
 
+            chunks_rendered++;
             chunk_finalization_index++;
             measure_elapsed_time();
         }
@@ -551,7 +559,7 @@ void World::update_loaded_region() {
     } else if (all_structures_generated) {
         if (init_queue_positions.size() > 0) {
             has_task = true;
-            int threads = UtilityFunctions::ceili(init_queue_positions.size() / (double) chunk_batch_size);
+            int threads = UtilityFunctions::ceili(init_queue_positions.size() / (double) decoration_batch_size);
             task_id = WorkerThreadPool::get_singleton()->add_group_task(callable_mp(this, &World::initialize_chunk_decorations), threads);
         } 
     } else {
@@ -626,6 +634,8 @@ void World::initialize_chunk(uint64_t index) {
             call_deferred("liven_chunk", chunk, coordinate);
         }
 
+        // ???? IDK BUT I NEED THIS OR LAG SPIKES OCCUR
+        std::this_thread::sleep_for(std::chrono::milliseconds(index % 3));
         chunk->calculate_block_statistics();
         chunk->never_initialized = false; 
         chunk->generate_mesh(false, coordinate);
@@ -636,7 +646,7 @@ void World::initialize_chunk(uint64_t index) {
 }
 
 void World::initialize_chunk_decorations(uint64_t index) {
-    for (int i = index * chunk_batch_size; i < (index + 1) * chunk_batch_size; i++) {
+    for (int i = index * decoration_batch_size; i < (index + 1) * decoration_batch_size; i++) {
         if (i >= init_queue_positions.size()) {
             return;
         }
@@ -1017,8 +1027,6 @@ void World::explode_at(Vector3 position, int radius, bool firey) {
 
         chunk->remove_block_at(Vector3i(explode_at), true);
         to_remesh.set(Vector3i(chunk->get_global_position()), true);
-
-        
     }
     }
     }
@@ -1051,6 +1059,46 @@ void World::explode_at(Vector3 position, int radius, bool firey) {
         chunk->generate_mesh(true, chunk_position);
         chunk->generate_water_surface_mesh(false, chunk_position, true);
     }
+}
+
+void World::explode_placement_at(Vector3 position, Ref<Block> block_type, int radius, float drop_chance) {
+    int block_index = block_type->index;
+    for (int i = -radius; i <= radius; i++) {
+    for (int j = -radius; j <= radius; j++) {
+    for (int k = -radius; k <= radius; k++) {
+        if (i * i + j * j + k * k > radius * radius) {
+            continue;
+        }
+        float block_radius = UtilityFunctions::sqrt(i * i + j * j + k * k);
+        float radius_ratio = block_radius / radius;
+        if (drop_chance > 0 && UtilityFunctions::randf() - radius_ratio * 0.5 < drop_chance) {
+            continue;
+        }
+
+        Vector3 explode_at = position + Vector3i(i, j, k);
+        if (!is_position_loaded(explode_at)) {
+            continue;
+        }
+
+        explode_at = explode_at.floor();
+
+        Chunk* chunk = get_chunk_at(explode_at);
+
+        Ref<Block> block_type = get_block_type_at(explode_at);
+        if (block_type->index != 0) {
+            continue;
+        }
+
+        chunk->place_block_at(Vector3i(explode_at), block_index, false);
+        if (!chunk->will_be_remeshed) {
+            chunk->will_be_remeshed = true;
+            to_remesh_later.push_back(chunk);  
+        }
+    }
+    }
+    }
+
+    emit_signal("block_placed", position, radius);
 }
 
 void World::flood_at(Vector3 position, int radius) {
@@ -1086,6 +1134,11 @@ void World::place_block_at(Vector3 position, Ref<Block> block_type, bool play_ef
         return;
     }
 
+    if (!immediate_remesh && !chunk->will_be_remeshed) {
+        chunk->will_be_remeshed = true;
+        to_remesh_later.push_back(chunk);  
+    }
+
     // This block has a living component
     if (block_type->living_block_path != "") {
         liven_block(position, block_type);
@@ -1098,7 +1151,7 @@ void World::place_block_at(Vector3 position, Ref<Block> block_type, bool play_ef
         place_effect->call("initialize", block_type);
     }
 
-    emit_signal("block_placed", Vector3i(position));
+    emit_signal("block_placed", Vector3i(position), 1);
 }
 
 void World::liven_block(Vector3i position, Ref<Block> block_type) {
@@ -1222,6 +1275,16 @@ void World::modify_chunk(Vector3 position) {
     Chunk* chunk = Object::cast_to<Chunk>(chunk_map[chunk_position]);
     chunk->modified = true;
     chunk->dirty = true;
+}
+
+void World::remesh_pending_chunks() {
+    for (int i = 0; i < to_remesh_later.size(); i++) {
+        Chunk* chunk = to_remesh_later[i];
+        chunk->generate_mesh(true, get_global_position());
+        chunk->generate_water_surface_mesh(false, get_global_position(), true);
+        chunk->will_be_remeshed = false;
+    }
+    to_remesh_later.clear();
 }
 
 // DEPRECATED: never called
@@ -1490,6 +1553,8 @@ void World::set_fusion_table(const PackedInt32Array new_array, int width) {
 DEFINE_PROPERTY_GETTER_SETTER(World, bool, debug_stall);
 DEFINE_PROPERTY_GETTER_SETTER(World, uint64_t, usec_budget_per_frame);
 DEFINE_PROPERTY_GETTER_SETTER(World, int, chunk_batch_size);
+DEFINE_PROPERTY_GETTER_SETTER(World, int, decoration_batch_size);
+DEFINE_PROPERTY_GETTER_SETTER(World, int, chunk_render_limit);
 DEFINE_PROPERTY_GETTER_SETTER(World, Ref<ShaderMaterial>, block_material);
 DEFINE_PROPERTY_GETTER_SETTER(World, Ref<ShaderMaterial>, foliage_material);
 DEFINE_PROPERTY_GETTER_SETTER(World, Ref<ShaderMaterial>, water_material);

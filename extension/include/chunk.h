@@ -62,6 +62,8 @@ class Chunk : public MeshInstance3D {
     PackedByteArray water_chunk_awake_buffer; // Stores whether each water subchunk should be awake
     PackedByteArray biome; // Stores the biome id of each block
 
+    bool will_be_remeshed = false;
+
     bool consistent_biome = true;
     bool consistent_void = true;
 

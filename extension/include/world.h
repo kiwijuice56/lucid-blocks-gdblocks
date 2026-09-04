@@ -45,6 +45,9 @@ class World : public Node3D {
 	// Frame allocation 
 	DECLARE_PROPERTY(uint64_t, usec_budget_per_frame, 3000);
 	DECLARE_PROPERTY(int, chunk_batch_size, 8);
+	DECLARE_PROPERTY(int, decoration_batch_size, 16);
+	DECLARE_PROPERTY(int, chunk_render_limit, 8);
+
 	uint64_t elapsed_time = 0; // Microseconds spent on the main thread
 	uint64_t frame_start_time = 0;
 
@@ -79,9 +82,15 @@ class World : public Node3D {
 	bool first_load = false;
 	bool all_loaded = false;
 	DECLARE_PROPERTY(bool, debug_stall, false);
+	int render_frame = 0;
 
 	// Stores references to all chunk node instances
 	std::vector<Chunk*> all_chunks;
+
+	// Used to save up all chunks that need to be remeshed for gameplay reasons;
+	// Currently only implemented for block placement, and pushes + call to remesh_pending_chunks
+	// must be atomic
+	std::vector<Chunk*> to_remesh_later;
 
 	// Stores coordinates (Vector3i) of loaded chunks
 	TypedDictionary<Vector3i, bool> is_chunk_loaded;
@@ -189,10 +198,12 @@ class World : public Node3D {
 	void break_block_at(Vector3 position, bool play_effect, bool override_restrictions);
 	void place_block_at(Vector3 position, Ref<Block> block_type, bool play_effect, bool immediate_remesh);
 	void explode_at(Vector3 position, int radius, bool firey);
+	void explode_placement_at(Vector3 position, Ref<Block> block_type, int radius, float drop_chance); // Assumes never immediate remesh
 	void flood_at(Vector3 position, int radius);
 	bool is_chunk_modified(Vector3 position);
 	void modify_chunk(Vector3 position);
 	void liven_chunk(Chunk* chunk, Vector3i coordinate);
+	void remesh_pending_chunks();
 	TypedDictionary<Vector3i, int> initialize_challenge(Ref<Decoration> challenge_decoration, TypedDictionary<int, int> block_replace_map);
 
 	// After a living block is placed/created, this method is always called to create
