@@ -114,6 +114,7 @@ void World::start_up() {
     is_block_internal.resize(block_types.size());
     is_block_top_face_randomized.resize(block_types.size());
     is_block_non_collision.resize(block_types.size());
+    is_block_can_generate_randomly.resize(block_types.size());
     block_index_to_id_map.resize(block_types.size());
 
     for (int64_t i = 0; i < block_types.size(); i++) {
@@ -129,6 +130,7 @@ void World::start_up() {
         is_block_internal[index] = block->internal;
         is_block_top_face_randomized[index] = block->top_face_random;
         is_block_non_collision[index] = block->no_collision_block;
+        is_block_can_generate_randomly[index] = block->can_generate_randomly;
     }
 
     for (int64_t i = 0; i < decorations.size(); i++) {
@@ -188,6 +190,7 @@ Chunk* World::instantiate_chunk() {
     new_chunk->is_block_internal = is_block_internal;
     new_chunk->is_block_top_face_randomized = is_block_top_face_randomized;
     new_chunk->is_block_non_collision = is_block_non_collision;
+    new_chunk->is_block_can_generate_randomly = is_block_can_generate_randomly;
     new_chunk->biome_height_map = generator->biome_height_map;
 
     new_chunk->block_material = block_material;

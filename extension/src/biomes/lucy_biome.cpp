@@ -28,7 +28,8 @@ void LucyBiome::generate_chunk_data(Chunk* chunk, Vector3i chunk_position, Vecto
             continue;
         }
 
-        int key = (position.x + position.y + position.z) % 96 + 1;
+        int key = (position.x + position.y + position.z) % 96;
+        if (key == 0) key++;
         bool x_aligned = position.x % key == 0;
         bool y_aligned = position.y % key == 0;
         bool z_aligned = position.z % key == 0;

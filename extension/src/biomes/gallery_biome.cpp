@@ -12,11 +12,6 @@ void GalleryBiome::generate_chunk_data(Chunk* chunk, Vector3i chunk_position, Ve
     uint16_t rng_seed = world->generator->seed;
     uint16_t base_seed = rng_seed;
 
-    // respawn blocks because they add a spawn point
-    int respawn_block_index = world->block_name_map["respawn block"];
-    int heaven_block_index = world->block_name_map["heaven block"];
-    int lucy_block_index = world->block_name_map["lucy block"];
-
     for (int64_t y = 0; y < Chunk::CHUNK_SIZE_Y; y++) {
     for (int64_t z = 0; z < Chunk::CHUNK_SIZE_Z; z++) {
     for (int64_t x = 0; x < Chunk::CHUNK_SIZE_X; x++) {
@@ -32,7 +27,7 @@ void GalleryBiome::generate_chunk_data(Chunk* chunk, Vector3i chunk_position, Ve
         int64_t block_type = 0;
         if (position.x % 8 == 0 && position.y % 8 == 0 && position.z % 8 == 0) {
             int64_t index = Random::randi(rng_seed) % world->block_types.size();
-            if (index == respawn_block_index || index == heaven_block_index || index == lucy_block_index || chunk->is_block_foliage[index] || chunk->is_block_internal[index]) {
+            if (!chunk->is_block_can_generate_randomly[index] || chunk->is_block_foliage[index] || chunk->is_block_internal[index]) {
                 block_type = 0;
             } else {
                 block_type = index;

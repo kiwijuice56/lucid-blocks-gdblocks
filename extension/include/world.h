@@ -51,8 +51,12 @@ class World : public Node3D {
 	uint64_t elapsed_time = 0; // Microseconds spent on the main thread
 	uint64_t frame_start_time = 0;
 
-	// Resources
+	// Resources 
 	DECLARE_PROPERTY_NO_DEFAULT(TypedArray<Block>, block_types);
+	DECLARE_PROPERTY_NO_DEFAULT(TypedArray<Decoration>, decorations);
+	DECLARE_PROPERTY_NO_DEFAULT(Ref<Generator>, generator);
+	
+	// Look-up tables
 	PackedByteArray is_block_foliage;
 	PackedByteArray is_block_floating_foliage;
     PackedByteArray is_block_transparent;
@@ -60,11 +64,9 @@ class World : public Node3D {
 	PackedByteArray is_block_internal;
 	PackedByteArray is_block_top_face_randomized;
 	PackedByteArray is_block_non_collision;
+	PackedByteArray is_block_can_generate_randomly;	
 	PackedInt32Array fusion_table;
 	int fusion_table_width;
-	DECLARE_PROPERTY_NO_DEFAULT(TypedArray<Decoration>, decorations);
-	TypedArray<Biome> biomes;
-	DECLARE_PROPERTY_NO_DEFAULT(Ref<Generator>, generator);
 
 	DECLARE_PROPERTY_NO_DEFAULT(Ref<ShaderMaterial>, block_material);
 	DECLARE_PROPERTY_NO_DEFAULT(Ref<ShaderMaterial>, foliage_material);

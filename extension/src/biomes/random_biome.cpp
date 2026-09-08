@@ -18,13 +18,8 @@ void RandomBiome::initialize() {
     Biome::initialize();
     random_noise = world->generator->noise[3];
     cloud_noise = world->generator->noise[30];
-
-    respawn_block_index = world->block_name_map["respawn block"];
-    heaven_block_index = world->block_name_map["heaven block"];
-    alma_block_index = world->block_name_map["alma block"];
-    lavender_block_index = world->block_name_map["lavender block"];
+    
     dirt_block_index = world->block_name_map["dirt block"];
-    gold_block_index = world->block_name_map["gold block"];
 }
 
 uint16_t RandomBiome::get_biome_seed(Vector3i position, Vector3i biome_coordinate) {
@@ -138,8 +133,7 @@ int RandomBiome::get_random_block(Chunk* chunk, uint16_t seed, bool allow_air, b
         int64_t block_index = Random::randi(seed) % chunk->block_types.size();
         Random::scramble_rng_seed(&seed, Vector3(-7, seed, 3));
 
-        // always forbidden
-        if (chunk->is_block_internal[block_index] || block_index == gold_block_index || block_index == respawn_block_index || block_index == heaven_block_index || block_index == lavender_block_index || block_index == alma_block_index) {
+        if (chunk->is_block_internal[block_index] || !chunk->is_block_can_generate_randomly[block_index]) {
             continue;
         }
 

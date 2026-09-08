@@ -102,6 +102,7 @@ class Chunk : public MeshInstance3D {
     PackedByteArray is_block_internal;
     PackedByteArray is_block_top_face_randomized;
     PackedByteArray is_block_non_collision;
+    PackedByteArray is_block_can_generate_randomly;
     Ref<ShaderMaterial> block_material;
 	Ref<ShaderMaterial> transparent_block_material;
     TypedDictionary<int, int> biome_height_map; // Maps biome ID to height

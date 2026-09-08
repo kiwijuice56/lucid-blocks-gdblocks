@@ -20,13 +20,6 @@ class RandomBiome : public Biome {
 
 	DECLARE_PROPERTY(bool, is_aether, false);
 
-	// forbidden blocks
-	int respawn_block_index = 0;
-    int heaven_block_index = 0;
-	int lavender_block_index = 0;
-	int gold_block_index = 0;
-	int alma_block_index = 0;
-
 	// default block
 	int dirt_block_index = 0;
 

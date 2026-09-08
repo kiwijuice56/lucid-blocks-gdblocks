@@ -43,6 +43,7 @@ void Block::_bind_methods() {
     BIND_REF_PROPERTY(Block, AudioStream, step_sound);
 
     ADD_GROUP("Behavior", "");
+    BIND_PROPERTY(Block, bool, can_generate_randomly);
     BIND_PROPERTY(Block, bool, no_collision_block);
     BIND_PROPERTY(Block, bool, unbreakable);
     BIND_PROPERTY(Block, bool, griefable);
@@ -122,3 +123,4 @@ DEFINE_PROPERTY_GETTER_SETTER(Block, bool, shovel_affinity);
 DEFINE_PROPERTY_GETTER_SETTER(Block, bool, top_face_random);
 DEFINE_PROPERTY_GETTER_SETTER(Block, bool, griefable);
 DEFINE_PROPERTY_GETTER_SETTER(Block, bool, no_collision_block);
+DEFINE_PROPERTY_GETTER_SETTER(Block, bool, can_generate_randomly);

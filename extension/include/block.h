@@ -67,6 +67,7 @@ class Block : public Item {
 	DECLARE_PROPERTY(bool, axe_affinity, false);
 	DECLARE_PROPERTY(bool, axe_required, false);
 	DECLARE_PROPERTY(bool, sustain_fire, false);
+	DECLARE_PROPERTY(bool, can_generate_randomly, true);
 	
 	uint32_t index = 0;
 
