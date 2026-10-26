@@ -82,6 +82,7 @@ void World::_bind_methods() {
     BIND_PROPERTY(World, int, chunk_batch_size);
     BIND_PROPERTY(World, int, decoration_batch_size);
     BIND_PROPERTY(World, int, chunk_render_limit);
+    BIND_PROPERTY(World, int, chunk_sleep_amount);
 
     ADD_SIGNAL(MethodInfo("fire_spread", PropertyInfo(Variant::VECTOR3, "position")));
     ADD_SIGNAL(MethodInfo("block_placed", PropertyInfo(Variant::VECTOR3, "position"), PropertyInfo(Variant::INT, "radius")));
@@ -362,23 +363,24 @@ void World::update_loaded_region() {
     elapsed_time = 0;
     frame_start_time = Time::get_singleton()->get_ticks_usec();
 
-    if (has_task) {
-        if (!WorkerThreadPool::get_singleton()->is_group_task_completed(task_id)) {
-            return;
-        }
-        WorkerThreadPool::get_singleton()->wait_for_group_task_completion(task_id);
-        has_task = false;
-    }
-
     if (finalizing_chunks) {
+        bool all_done = true;
         int chunks_rendered = 0;
-        while (elapsed_time < usec_budget_per_frame && chunks_rendered < chunk_render_limit) {
-            if (chunk_finalization_index >= init_queue.size()) {
-                break;
+        for (int i = 0; i < init_queue.size() && elapsed_time < usec_budget_per_frame && chunks_rendered < chunk_render_limit; i++) {
+            chunk_done_lock.lock();
+            bool is_done_generating = init_queue_done[i];
+            chunk_done_lock.unlock();
+            if (!is_done_generating) {
+                all_done = false;
+                continue;
+            }
+            
+            Vector3i coordinate = init_queue_positions[i];
+            if (is_chunk_loaded[coordinate]) {
+                continue;
             }
 
-            Chunk* chunk = init_queue[chunk_finalization_index];
-            Vector3i coordinate = init_queue_positions[chunk_finalization_index];
+            Chunk* chunk = init_queue[i];
             chunk->finalize_main_mesh_loading();
             chunk->finalize_water_mesh_loading();
             chunk->finalize_water_surface_mesh_loading();
@@ -388,11 +390,11 @@ void World::update_loaded_region() {
             emit_signal("chunk_loaded", coordinate);            
 
             chunks_rendered++;
-            chunk_finalization_index++;
             measure_elapsed_time();
+            all_done = false;
         }
 
-        if (chunk_finalization_index < init_queue.size()) {
+        if (!all_done) {
             return;
         }
 
@@ -400,8 +402,17 @@ void World::update_loaded_region() {
         return;
     }
 
+    if (has_task) {
+        if (!WorkerThreadPool::get_singleton()->is_group_task_completed(task_id)) {
+            return;
+        }
+        WorkerThreadPool::get_singleton()->wait_for_group_task_completion(task_id);
+        has_task = false;
+    }
+
     init_queue.clear();
     init_queue_positions.clear();
+    init_queue_done.clear();
 
     bool all_decorations_generated = true;
     bool all_structures_generated = true;
@@ -549,7 +560,7 @@ void World::update_loaded_region() {
         }
 
         if (init_queue.size() > 0) {
-            chunk_finalization_index = 0;
+            init_queue_done.assign(init_queue.size(), false);
             finalizing_chunks = true;
 
             has_task = true;
@@ -638,12 +649,15 @@ void World::initialize_chunk(uint64_t index) {
         }
 
         // ???? IDK BUT I NEED THIS OR LAG SPIKES OCCUR
-        std::this_thread::sleep_for(std::chrono::milliseconds(index % 3));
+        std::this_thread::sleep_for(std::chrono::microseconds(index % chunk_sleep_amount));
         chunk->calculate_block_statistics();
         chunk->never_initialized = false; 
         chunk->generate_mesh(false, coordinate);
         chunk->generate_water_mesh(true, coordinate, false);
         chunk->generate_water_surface_mesh(true, coordinate, false); // This CLEARS the surface mesh
+        chunk_done_lock.lock();
+        init_queue_done[i] = true;
+        chunk_done_lock.unlock();
     }
     
 }
@@ -1521,7 +1535,7 @@ void World::measure_elapsed_time() {
 
 
 void World::set_instance_radius(int64_t new_radius) {
-    instance_radius = UtilityFunctions::clampi(new_radius, 48, 256);
+    instance_radius = UtilityFunctions::clampi(new_radius, 48, 1024);
 }
 
 void World::refresh_instance_radius() {
@@ -1558,6 +1572,7 @@ DEFINE_PROPERTY_GETTER_SETTER(World, uint64_t, usec_budget_per_frame);
 DEFINE_PROPERTY_GETTER_SETTER(World, int, chunk_batch_size);
 DEFINE_PROPERTY_GETTER_SETTER(World, int, decoration_batch_size);
 DEFINE_PROPERTY_GETTER_SETTER(World, int, chunk_render_limit);
+DEFINE_PROPERTY_GETTER_SETTER(World, int, chunk_sleep_amount);
 DEFINE_PROPERTY_GETTER_SETTER(World, Ref<ShaderMaterial>, block_material);
 DEFINE_PROPERTY_GETTER_SETTER(World, Ref<ShaderMaterial>, foliage_material);
 DEFINE_PROPERTY_GETTER_SETTER(World, Ref<ShaderMaterial>, water_material);

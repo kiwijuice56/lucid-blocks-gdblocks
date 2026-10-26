@@ -47,6 +47,7 @@ class World : public Node3D {
 	DECLARE_PROPERTY(int, chunk_batch_size, 8);
 	DECLARE_PROPERTY(int, decoration_batch_size, 16);
 	DECLARE_PROPERTY(int, chunk_render_limit, 8);
+	DECLARE_PROPERTY(int, chunk_sleep_amount, 3000);
 
 	uint64_t elapsed_time = 0; // Microseconds spent on the main thread
 	uint64_t frame_start_time = 0;
@@ -117,16 +118,16 @@ class World : public Node3D {
 
 	// Used to access chunks that need to be initialized
 	std::vector<Chunk*> init_queue;
+	std::vector<bool> init_queue_done;
 	std::vector<Vector3i> init_queue_positions;
 	std::vector<Chunk*> needs_meshing_queue;
-	std::mutex mesh_queue_mutex;
 
 	// Multithreading state
 	uint64_t task_id = 0;
 	bool finalizing_chunks = false;
-	int chunk_finalization_index = 0;
 	bool has_task = false;
 	std::mutex decoration_lock;
+	std::mutex chunk_done_lock;
 
 	// Water state
 	uint8_t water_frame = 0;
